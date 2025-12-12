@@ -16,6 +16,7 @@ type Context struct {
 	// 请求信息
 	Path   string
 	Method string
+	Params map[string]string
 	// 响应信息
 	StatusCode int
 }
@@ -37,6 +38,12 @@ func (c *Context) PostForm(key string) string {
 // Query 获取 GET 请求中的查询参数
 func (c *Context) Query(key string) string {
 	return c.Req.URL.Query().Get(key)
+}
+
+// Param 获取路由参数
+func (c *Context) Param(key string) string {
+	value, _ := c.Params[key]
+	return value
 }
 
 // Status 设置响应状态码
