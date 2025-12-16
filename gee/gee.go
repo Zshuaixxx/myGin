@@ -3,6 +3,8 @@ package gee
 import (
 	"log"
 	"net/http"
+	"strings"
+	"time"
 )
 
 // HandlerFunc 定义了gee的请求处理函数
@@ -23,7 +25,14 @@ type RouterGroup struct {
 }
 
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	var middlewares []HandlerFunc
+	for _, group := range engine.groups {
+		if strings.HasPrefix(req.URL.Path, group.prefix) {
+			middlewares = append(middlewares, group.middlewares...)
+		}
+	}
 	c := newContext(w, req)
+	c.middlewares = middlewares
 	engine.router.handle(c)
 }
 
@@ -48,6 +57,11 @@ func (group *RouterGroup) Group(prefix string) *RouterGroup {
 	return newGroup
 }
 
+// Use 添加中间件到路由组
+func (group *RouterGroup) Use(middlewares ...HandlerFunc) {
+	group.middlewares = append(group.middlewares, middlewares...)
+}
+
 // addRoute 添加路由规则
 func (group *RouterGroup) addRoute(method string, comp string, handler HandlerFunc) {
 	pattern := group.prefix + comp
@@ -68,4 +82,15 @@ func (group *RouterGroup) POST(pattern string, handler HandlerFunc) {
 // Run 启动 HTTP 服务器
 func (engine *Engine) Run(addr string) (err error) {
 	return http.ListenAndServe(addr, engine)
+}
+
+func Logger() HandlerFunc {
+	return func(c *Context) {
+		// Start timer
+		t := time.Now()
+		// Process request
+		c.Next()
+		// Calculate resolution time
+		log.Printf("Logger: [%d] %s in %v", c.StatusCode, c.Req.RequestURI, time.Since(t))
+	}
 }

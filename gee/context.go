@@ -19,6 +19,9 @@ type Context struct {
 	Params map[string]string
 	// 响应信息
 	StatusCode int
+	// 中间件处理函数
+	middlewares []HandlerFunc
+	index       int
 }
 
 func newContext(w http.ResponseWriter, req *http.Request) *Context {
@@ -27,6 +30,15 @@ func newContext(w http.ResponseWriter, req *http.Request) *Context {
 		Req:    req,
 		Path:   req.URL.Path,
 		Method: req.Method,
+		index:  -1,
+	}
+}
+
+func (c *Context) Next() {
+	c.index++
+	s := len(c.middlewares)
+	for ; c.index < s; c.index++ {
+		c.middlewares[c.index](c)
 	}
 }
 
